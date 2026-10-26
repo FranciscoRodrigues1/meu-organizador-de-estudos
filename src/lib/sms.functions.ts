@@ -9,9 +9,9 @@ export const enviarLembreteSms = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data }) => {
-    const lovableKey = process.env.LOVABLE_API_KEY;
-    const twilioKey = process.env.TWILIO_API_KEY;
-    const from = process.env.TWILIO_FROM_NUMBER;
+    const lovableKey = process.env["LOVABLE_API_KEY"];
+    const twilioKey = process.env["TWILIO_API_KEY"];
+    const from = process.env["TWILIO_FROM_NUMBER"];
     if (!lovableKey || !twilioKey || !from) throw new Error("SMS não configurado");
     const res = await fetch(`${GATEWAY_URL}/Messages.json`, {
       method: "POST",
