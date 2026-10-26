@@ -25,7 +25,7 @@ type Tarefa = {
   criadaEm: string;
   prioridade: Prioridade;
   lista: string;
-  agendadaPara?: string;
+  agendadaPara?: string | undefined;
   lembreteEnviado?: boolean;
 };
 
