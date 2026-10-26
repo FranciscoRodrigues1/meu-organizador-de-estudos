@@ -145,3 +145,14 @@
     color: var(--color-foreground);
   }
 }
+
+:root {
+  --prio-alta: oklch(0.62 0.2 25);
+  --prio-media: oklch(0.78 0.15 75);
+  --prio-baixa: oklch(0.65 0.15 150);
+}
+@theme inline {
+  --color-prio-alta: var(--prio-alta);
+  --color-prio-media: var(--prio-media);
+  --color-prio-baixa: var(--prio-baixa);
+}
