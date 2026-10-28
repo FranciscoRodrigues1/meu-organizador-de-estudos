@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 
 export const enviarLembreteSms = createServerFn({ method: "POST" })
-  .inputValidator((d: { telefone: string; mensagem: string }) => {
+  .inputValidator((d) => {
     if (!/^\+\d{10,15}$/.test(d.telefone)) throw new Error("Telefone inválido");
     if (!d.mensagem || d.mensagem.length > 500) throw new Error("Mensagem inválida");
     return d;

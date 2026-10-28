@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Check, Trash2, Plus, BookOpen, CalendarClock, Clock, Bell, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, Trash2, Plus, BookOpen, CalendarClock, Clock, Bell, X, Pencil } from "lucide-react";
 import { enviarLembreteSms } from "@/lib/sms.functions";
 
 export const Route = createFileRoute("/")({
@@ -17,30 +17,18 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Prioridade = "alta" | "media" | "baixa";
-type Tarefa = {
-  id: number;
-  texto: string;
-  concluida: boolean;
-  criadaEm: string;
-  prioridade: Prioridade;
-  lista: string;
-  agendadaPara?: string | undefined;
-  lembreteEnviado?: boolean;
-};
-
-const PRIORIDADES: Record<Prioridade, { rotulo: string; bolinha: string; borda: string }> = {
+const PRIORIDADES = {
   alta: { rotulo: "Alta", bolinha: "bg-prio-alta", borda: "border-l-prio-alta" },
   media: { rotulo: "Média", bolinha: "bg-prio-media", borda: "border-l-prio-media" },
   baixa: { rotulo: "Baixa", bolinha: "bg-prio-baixa", borda: "border-l-prio-baixa" },
 };
 const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-const fmt = (iso: string) =>
+const fmt = (iso) =>
   new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-const mesmoDia = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+const mesmoDia = (a, b) => a.toDateString() === b.toDateString();
 
-function usePersistido<T>(chave: string, inicial: T) {
-  const [v, setV] = useState<T>(inicial);
+function usePersistido(chave, inicial) {
+  const [v, setV] = useState(inicial);
   const carregado = useRef(false);
   useEffect(() => {
     const s = localStorage.getItem(chave);
@@ -50,21 +38,23 @@ function usePersistido<T>(chave: string, inicial: T) {
   useEffect(() => {
     if (carregado.current) localStorage.setItem(chave, JSON.stringify(v));
   }, [chave, v]);
-  return [v, setV] as const;
+  return [v, setV];
 }
 
 function Index() {
-  const [tarefas, setTarefas] = usePersistido<Tarefa[]>("tarefas", []);
-  const [listas, setListas] = usePersistido<string[]>("listas", ["Geral"]);
-  const [telefone, setTelefone] = usePersistido<string>("telefone", "");
+  const [tarefas, setTarefas] = usePersistido("tarefas", []);
+  const [listas, setListas] = usePersistido("listas", ["Geral"]);
+  const [telefone, setTelefone] = usePersistido("telefone", "");
   const [listaAtiva, setListaAtiva] = useState("Geral");
-  const [diaFiltro, setDiaFiltro] = useState<string | null>(null);
+  const [diaFiltro, setDiaFiltro] = useState(null);
   const [texto, setTexto] = useState("");
-  const [prioridade, setPrioridade] = useState<Prioridade>("media");
+  const [prioridade, setPrioridade] = useState("media");
   const [agenda, setAgenda] = useState("");
   const [novaLista, setNovaLista] = useState("");
   const [aviso, setAviso] = useState("");
-  const [agora, setAgora] = useState<Date | null>(null);
+  const [agora, setAgora] = useState(null);
+  const [editandoId, setEditandoId] = useState(null);
+  const [textoEdicao, setTextoEdicao] = useState("");
 
   useEffect(() => {
     setAgora(new Date());
@@ -100,7 +90,7 @@ function Index() {
     });
   }, [agora]);
 
-  const adicionar = (e: FormEvent) => {
+  const adicionar = (e) => {
     e.preventDefault();
     const t = texto.trim();
     if (!t) return;
@@ -119,10 +109,24 @@ function Index() {
     setTexto("");
     setAgenda("");
   };
-  const alternar = (id: number) =>
+  const alternar = (id) =>
     setTarefas((l) => l.map((t) => (t.id === id ? { ...t, concluida: !t.concluida } : t)));
-  const excluir = (id: number) => setTarefas((l) => l.filter((t) => t.id !== id));
-  const criarLista = (e: FormEvent) => {
+  const excluir = (id) => setTarefas((l) => l.filter((t) => t.id !== id));
+  const iniciarEdicao = (t) => {
+    setEditandoId(t.id);
+    setTextoEdicao(t.texto);
+  };
+  const cancelarEdicao = () => {
+    setEditandoId(null);
+    setTextoEdicao("");
+  };
+  const salvarEdicao = (id) => {
+    const t = textoEdicao.trim();
+    if (!t) return;
+    setTarefas((l) => l.map((x) => (x.id === id ? { ...x, texto: t } : x)));
+    cancelarEdicao();
+  };
+  const criarLista = (e) => {
     e.preventDefault();
     const n = novaLista.trim();
     if (!n || listas.includes(n)) return;
@@ -130,7 +134,7 @@ function Index() {
     setListaAtiva(n);
     setNovaLista("");
   };
-  const excluirLista = (n: string) => {
+  const excluirLista = (n) => {
     setListas(listas.filter((l) => l !== n));
     setTarefas((l) => l.filter((t) => t.lista !== n));
     setListaAtiva("Geral");
@@ -256,7 +260,7 @@ function Index() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1">
               <span className="mr-1 text-sm text-muted-foreground">Prioridade:</span>
-              {(Object.keys(PRIORIDADES) as Prioridade[]).map((p) => (
+              {Object.keys(PRIORIDADES).map((p) => (
                 <button
                   type="button"
                   key={p}
@@ -302,25 +306,66 @@ function Index() {
                 >
                   <Check className="h-4 w-4" />
                 </button>
-                <div className="min-w-0 flex-1">
-                  <p className={`break-words font-semibold ${t.concluida ? "text-muted-foreground line-through" : "text-foreground"}`}>
-                    {t.texto}
-                  </p>
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <span className={`h-2 w-2 rounded-full ${PRIORIDADES[t.prioridade].bolinha}`} />
-                      {PRIORIDADES[t.prioridade].rotulo}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> Criada em {fmt(t.criadaEm)}
-                    </span>
-                    {t.agendadaPara && (
-                      <span className="flex items-center gap-1 font-semibold text-primary">
-                        <CalendarClock className="h-3 w-3" /> {DIAS[new Date(t.agendadaPara).getDay()]}, {fmt(t.agendadaPara)}
+                {editandoId === t.id ? (
+                  <form
+                    className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      salvarEdicao(t.id);
+                    }}
+                  >
+                    <input
+                      value={textoEdicao}
+                      onChange={(e) => setTextoEdicao(e.target.value)}
+                      aria-label="Editar título da tarefa"
+                      autoFocus
+                      className="min-w-0 flex-1 rounded-lg border border-input bg-background px-3 py-1.5 text-foreground outline-none focus:ring-2 focus:ring-ring"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!textoEdicao.trim()}
+                      className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelarEdicao}
+                      className="rounded-lg bg-secondary px-3 py-1.5 text-sm font-bold text-secondary-foreground hover:bg-accent"
+                    >
+                      Cancelar
+                    </button>
+                  </form>
+                ) : (
+                  <div className="min-w-0 flex-1">
+                    <p className={`break-words font-semibold ${t.concluida ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                      {t.texto}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className={`h-2 w-2 rounded-full ${PRIORIDADES[t.prioridade].bolinha}`} />
+                        {PRIORIDADES[t.prioridade].rotulo}
                       </span>
-                    )}
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> Criada em {fmt(t.criadaEm)}
+                      </span>
+                      {t.agendadaPara && (
+                        <span className="flex items-center gap-1 font-semibold text-primary">
+                          <CalendarClock className="h-3 w-3" /> {DIAS[new Date(t.agendadaPara).getDay()]}, {fmt(t.agendadaPara)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
+                {editandoId !== t.id && (
+                  <button
+                    onClick={() => iniciarEdicao(t)}
+                    aria-label="Editar tarefa"
+                    className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-primary"
+                  >
+                    <Pencil className="h-5 w-5" />
+                  </button>
+                )}
                 <button
                   onClick={() => excluir(t.id)}
                   aria-label="Excluir tarefa"
