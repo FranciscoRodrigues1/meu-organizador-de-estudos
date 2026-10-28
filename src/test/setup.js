@@ -7,7 +7,7 @@ Object.defineProperty(window, "scrollTo", {
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: (query: string) => ({
+  value: (query) => ({
     matches: false,
     media: query,
     onchange: null,

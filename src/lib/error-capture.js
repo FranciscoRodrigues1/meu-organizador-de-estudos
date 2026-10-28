@@ -1,10 +1,10 @@
-// Captures the original Error out-of-band so server.ts can recover the stack
+// Captures the original Error out-of-band so server.js can recover the stack
 // when h3 has already swallowed the throw into a generic 500 Response.
 
-let lastCapturedError: { error: unknown; at: number } | undefined;
+let lastCapturedError;
 const TTL_MS = 5_000;
 
-function record(error: unknown) {
+function record(error) {
   lastCapturedError = { error, at: Date.now() };
 }
 
@@ -15,9 +15,9 @@ function record(error: unknown) {
 const CAUSE_DEPTH_LIMIT = 5;
 const DESCRIPTION_LENGTH_LIMIT = 8_000;
 
-export function describeError(error: unknown): string {
-  const parts: string[] = [];
-  let current: unknown = error;
+export function describeError(error) {
+  const parts = [];
+  let current = error;
   for (let depth = 0; depth < CAUSE_DEPTH_LIMIT && current != null; depth++) {
     if (!(current instanceof Error)) {
       parts.push(typeof current === "string" ? current : safeStringify(current));
@@ -31,13 +31,13 @@ export function describeError(error: unknown): string {
   return parts.join("\n").slice(0, DESCRIPTION_LENGTH_LIMIT);
 }
 
-function describeStatus(error: Error): string {
-  const { status, statusCode } = error as { status?: unknown; statusCode?: unknown };
+function describeStatus(error) {
+  const { status, statusCode } = error;
   const value = status ?? statusCode;
   return typeof value === "number" ? ` (status ${value})` : "";
 }
 
-function safeStringify(value: unknown): string {
+function safeStringify(value) {
   try {
     return JSON.stringify(value) ?? String(value);
   } catch {
@@ -45,7 +45,7 @@ function safeStringify(value: unknown): string {
   }
 }
 
-function isErrorLike(value: unknown): value is Error {
+function isErrorLike(value) {
   return value instanceof Error;
 }
 
@@ -53,7 +53,7 @@ function isErrorLike(value: unknown): value is Error {
 // unhandled-error logging, which this file cannot hook directly — are both
 // recorded for consumeLastCapturedError and expanded before serialization.
 const originalConsoleError = console.error.bind(console);
-console.error = (...args: unknown[]) => {
+console.error = (...args) => {
   const expanded = args.map((arg) => {
     if (!isErrorLike(arg)) return arg;
     record(arg);
@@ -63,13 +63,13 @@ console.error = (...args: unknown[]) => {
 };
 
 if (typeof globalThis.addEventListener === "function") {
-  globalThis.addEventListener("error", (event) => record((event as ErrorEvent).error ?? event));
+  globalThis.addEventListener("error", (event) => record(event.error ?? event));
   globalThis.addEventListener("unhandledrejection", (event) =>
-    record((event as PromiseRejectionEvent).reason),
+    record(event.reason),
   );
 }
 
-export function consumeLastCapturedError(): unknown {
+export function consumeLastCapturedError() {
   if (!lastCapturedError) return undefined;
   if (Date.now() - lastCapturedError.at > TTL_MS) {
     lastCapturedError = undefined;
